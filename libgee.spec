@@ -1,11 +1,11 @@
 Name:           libgee
-Version:        0.18.1
+Version:        0.20.1
 Release:        1%{?dist}
 Summary:        GObject collection library
 
 License:        LGPLv2+
 URL:            https://wiki.gnome.org/Projects/Libgee
-Source0:        https://download.gnome.org/sources/libgee/0.18/libgee-%{version}.tar.xz
+Source0:        https://download.gnome.org/sources/libgee/0.20/libgee-%{version}.tar.xz
 
 BuildRequires:  glib2-devel
 BuildRequires:  gobject-introspection-devel
@@ -100,6 +100,10 @@ find $RPM_BUILD_ROOT -name '*.la' -exec rm -f {} ';'
 
 
 %changelog
+* Sun Mar 11 2018 Kalev Lember <klember@redhat.com> - 0.20.1-1
+- Update to 0.20.1
+- Resolves: #1569285
+
 * Wed Oct 12 2016 Kalev Lember <klember@redhat.com> - 0.18.1-1
 - Update to 0.18.1
 - Resolves: #1387003

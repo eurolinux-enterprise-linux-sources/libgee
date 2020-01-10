@@ -1,3 +1,73 @@
+2018-02-11  Maciej Piechotka  <uzytkownik2@gmail.com>
+
+	Revert "Add additional query functions to Traversable<G>"
+	This reverts commit da95e830524ffa309eb57925320666e5085b9d66.
+
+2017-12-11  Edward Hennessy  <ehennes@sbcglobal.net>
+
+	Add additional query functions to Traversable<G>
+	* one_match (Predicate<G>) check if exactly one element matches
+	* count_match (Predicate<G>) returns the count of items that matches
+
+	https://bugzilla.gnome.org/show_bug.cgi?id=781641
+
+2017-12-11  Rico Tzschichholz  <ricotz@ubuntu.com>
+
+	Fix links in Traverable.tee() doc
+
+2017-09-12  Rico Tzschichholz  <ricotz@ubuntu.com>
+
+	Fix some delegate copying warnings
+
+2017-03-21  Maciej Piechotka  <uzytkownik2@gmail.com>
+
+	Release 0.20.0
+
+2017-02-22  Maciej Piechotka  <uzytkownik2@gmail.com>
+
+	Release 0.19.91
+
+	Change @since to reflect the correct version
+
+2017-01-17  Rodrigo Moya  <rodrigo@gnome.org>
+
+	Add some more query operations for Traversable<G>
+	* first_match (Predicate<G>) returns the first item that matches
+	* any_match (Predicate<G>) checks if any element matches
+	* all_match (Predicate<G>) checks if all elements match
+	* max/min returns max/min value
+	* order_by to perform ordering on any Traversable
+
+	https://bugzilla.gnome.org/show_bug.cgi?id=776558
+
+2016-12-14  Rico Tzschichholz  <ricotz@ubuntu.com>
+
+	Drop obsolete VALA_0_16 conditionals
+
+2016-11-23  Colomban Wendling  <ban@herbesfolles.org>
+
+	Fix converting enumerations and flags to arrays
+	Enumerations and flags are classed types for Vala, not integers, so
+	they don't fall in the `typeof(G) == typeof(int)` kind of tests. This
+	leads to using the generic code in which Vala assumes pointer-sized
+	elements, which is often not true for enumerations and flags.
+
+	Add special case for those to use the `int` converters for enumerations
+	and flags.
+
+	This is most generally correct, but not always: the compiler will
+	likely chose a larger type for a specific enumeration if one of its
+	value is larger than `int`.  It would be tempting to use the
+	enumeration's class minimum and maximum values to determine the
+	appropriate type, but unfortunately the API for this uses int itself,
+	so doesn't help.
+
+	https://bugzilla.gnome.org/show_bug.cgi?id=774669
+
+2016-10-12  Maciej Piechotka  <uzytkownik2@gmail.com>
+
+	Release 0.18.1
+
 2016-10-11  Ole André Vadla Ravnås  <oleavr@gmail.com>
 
 	Fix memory-leaks by avoiding field initializers for generic fields
