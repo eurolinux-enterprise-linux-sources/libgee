@@ -1,19 +1,14 @@
 Name:           libgee
-Version:        0.10.1
-Release:        3%{?dist}
+Version:        0.18.1
+Release:        1%{?dist}
 Summary:        GObject collection library
 
-Group:          System Environment/Libraries
 License:        LGPLv2+
-URL:            http://live.gnome.org/Libgee
-#VCS:           git:git://git.gnome.org/libgee
-Source0:        http://download.gnome.org/sources/libgee/0.10/libgee-%{version}.tar.xz
+URL:            https://wiki.gnome.org/Projects/Libgee
+Source0:        https://download.gnome.org/sources/libgee/0.18/libgee-%{version}.tar.xz
 
 BuildRequires:  glib2-devel
 BuildRequires:  gobject-introspection-devel
-# Bootstrap requirements
-BuildRequires:  autoconf automake libtool
-BuildRequires:  vala
 
 %description
 libgee is a collection library providing GObject-based interfaces and
@@ -56,9 +51,7 @@ library. It's planned to provide bindings for further languages.
 
 %package        devel
 Summary:        Development files for %{name}
-Group:          Development/Libraries
-Requires:       %{name} = %{version}-%{release}
-Requires:       pkgconfig
+Requires:       %{name}%{?_isa} = %{version}-%{release}
 
 %description    devel
 The %{name}-devel package contains libraries and header files for
@@ -67,19 +60,10 @@ developing applications that use %{name}.
 
 %prep
 %setup -q
-# ChangeLog not UTF8
-iconv -f iso88591 -t utf8 ChangeLog -o ChangeLog.new
-touch -r ChangeLog ChangeLog.new
-mv ChangeLog.new ChangeLog
 
 
 %build
-(if ! test -x configure; then
-    NOCONFIGURE=1 ./autogen.sh;
-    CONFIGFLAGS=--enable-gtk-doc;
- fi;
- %configure --disable-static $CONFIGFLAGS
-)
+%configure --disable-static
 make %{?_smp_mflags}
 
 
@@ -88,8 +72,7 @@ make check
 
 
 %install
-rm -rf $RPM_BUILD_ROOT
-make install DESTDIR=$RPM_BUILD_ROOT
+%make_install
 find $RPM_BUILD_ROOT -name '*.la' -exec rm -f {} ';'
 
 
@@ -99,7 +82,8 @@ find $RPM_BUILD_ROOT -name '*.la' -exec rm -f {} ';'
 
 
 %files
-%doc AUTHORS ChangeLog COPYING MAINTAINERS NEWS README
+%doc AUTHORS MAINTAINERS NEWS README
+%license COPYING
 %{_libdir}/*.so.*
 %dir %{_libdir}/girepository-1.0
 %{_libdir}/girepository-1.0/Gee-0.8.typelib
@@ -116,6 +100,10 @@ find $RPM_BUILD_ROOT -name '*.la' -exec rm -f {} ';'
 
 
 %changelog
+* Wed Oct 12 2016 Kalev Lember <klember@redhat.com> - 0.18.1-1
+- Update to 0.18.1
+- Resolves: #1387003
+
 * Fri Jan 24 2014 Daniel Mach <dmach@redhat.com> - 0.10.1-3
 - Mass rebuild 2014-01-24
 

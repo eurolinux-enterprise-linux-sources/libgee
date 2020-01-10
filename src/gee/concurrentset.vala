@@ -1,6 +1,6 @@
 /* concurrentset.vala
  *
- * Copyright (C) 2012  Maciej Piechotka
+ * Copyright (C) 2012-2014  Maciej Piechotka
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -33,11 +33,13 @@ public class Gee.ConcurrentSet<G> : AbstractSortedSet<G> {
 		if (compare_func == null) {
 			compare_func = Functions.get_compare_func_for (typeof (G));
 		}
-		_cmp = compare_func;
+		_cmp = (owned)compare_func;
+		_head = new Tower<G>.head ();
 	}
 
 	~ConcurrentSet () {
 		HazardPointer.Context ctx = new HazardPointer.Context ();
+		Utils.Misc.unused (ctx);
 		_head = null;
 	}
 
@@ -51,12 +53,14 @@ public class Gee.ConcurrentSet<G> : AbstractSortedSet<G> {
 
 	public override bool contains (G key) {
 		HazardPointer.Context ctx = new HazardPointer.Context ();
+		Utils.Misc.unused (ctx);
 		Tower<G> prev = _head;
 		return Tower.search<G> (_cmp, key, ref prev, null);
 	}
 
 	public override bool add (G key) {
 		HazardPointer.Context ctx = new HazardPointer.Context ();
+		Utils.Misc.unused (ctx);
 		Rand *rnd = rand.get ();
 		if (rnd == null) {
 			rand.set (rnd = new Rand ());
@@ -80,6 +84,7 @@ public class Gee.ConcurrentSet<G> : AbstractSortedSet<G> {
 
 	public override bool remove (G item) {
 		HazardPointer.Context ctx = new HazardPointer.Context ();
+		Utils.Misc.unused (ctx);
 		TowerIter<G> prev = TowerIter<G>();
 		for (int i = 0; i < _MAX_HEIGHT; i++) {
 			prev._iter[i] = _head;
@@ -93,6 +98,7 @@ public class Gee.ConcurrentSet<G> : AbstractSortedSet<G> {
 
 	public override void clear () {
 		HazardPointer.Context ctx = new HazardPointer.Context ();
+		Utils.Misc.unused (ctx);
 		Tower<G>? first;
 		while ((first = _head.get_next (0)) != null) {
 			remove (first._data);
@@ -101,6 +107,7 @@ public class Gee.ConcurrentSet<G> : AbstractSortedSet<G> {
 
 	public override G first () {
 		HazardPointer.Context ctx = new HazardPointer.Context ();
+		Utils.Misc.unused (ctx);
 		Tower<G>? prev = null;
 		Tower<G> curr = _head;
 		if (Tower.proceed<G> (_cmp, ref prev, ref curr, 0)) {
@@ -112,6 +119,7 @@ public class Gee.ConcurrentSet<G> : AbstractSortedSet<G> {
 
 	public override G last () {
 		HazardPointer.Context ctx = new HazardPointer.Context ();
+		Utils.Misc.unused (ctx);
 		Tower<G>? prev = null;
 		Tower<G> curr = _head;
 		bool found = false;
@@ -128,6 +136,7 @@ public class Gee.ConcurrentSet<G> : AbstractSortedSet<G> {
 
 	public override Gee.Iterator<G>? iterator_at (G element) {
 		HazardPointer.Context ctx = new HazardPointer.Context ();
+		Utils.Misc.unused (ctx);
 		TowerIter<G> prev = TowerIter<G> ();
 		TowerIter<G> curr;
 		for (int i = 0; i < _MAX_HEIGHT; i++) {
@@ -141,6 +150,7 @@ public class Gee.ConcurrentSet<G> : AbstractSortedSet<G> {
 
 	public override G? lower (G element) {
 		HazardPointer.Context ctx = new HazardPointer.Context ();
+		Utils.Misc.unused (ctx);
 		Tower<G> prev = _head;
 		Tower.search<G> (_cmp, element, ref prev);
 		if (prev == _head) {
@@ -151,6 +161,7 @@ public class Gee.ConcurrentSet<G> : AbstractSortedSet<G> {
 
 	public override G? higher (G element) {
 		HazardPointer.Context ctx = new HazardPointer.Context ();
+		Utils.Misc.unused (ctx);
 		Tower<G> prev = _head;
 		Tower<G>? next;
 		if (Tower.search<G> (_cmp, element, ref prev, out next)) {
@@ -166,6 +177,7 @@ public class Gee.ConcurrentSet<G> : AbstractSortedSet<G> {
 
 	public override G? floor (G element) {
 		HazardPointer.Context ctx = new HazardPointer.Context ();
+		Utils.Misc.unused (ctx);
 		Tower<G> prev = _head;
 		Tower<G>? next;
 		if (Tower.search<G> (_cmp, element, ref prev, out next)) {
@@ -179,6 +191,7 @@ public class Gee.ConcurrentSet<G> : AbstractSortedSet<G> {
 
 	public override G? ceil (G element) {
 		HazardPointer.Context ctx = new HazardPointer.Context ();
+		Utils.Misc.unused (ctx);
 		Tower<G> prev = _head;
 		Tower<G>? next;
 		Tower.search<G> (_cmp, element, ref prev, out next);
@@ -190,15 +203,18 @@ public class Gee.ConcurrentSet<G> : AbstractSortedSet<G> {
 
 	public override SortedSet<G> head_set (G before) {
 		HazardPointer.Context ctx = new HazardPointer.Context ();
+		Utils.Misc.unused (ctx);
 		return new SubSet<G> (new Range<G>.head (this, before));
 	}
 
 	public override SortedSet<G> tail_set (G after) {
 		HazardPointer.Context ctx = new HazardPointer.Context ();
+		Utils.Misc.unused (ctx);
 		return new SubSet<G> (new Range<G>.tail (this, after));
 	}
 	public override SortedSet<G> sub_set (G from, G to) {
 		HazardPointer.Context ctx = new HazardPointer.Context ();
+		Utils.Misc.unused (ctx);
 		return new SubSet<G> (new Range<G> (this, from, to));
 	}
 
@@ -231,9 +247,9 @@ public class Gee.ConcurrentSet<G> : AbstractSortedSet<G> {
 #endif
 
 	private int _size = 0;
-	private Tower<G> _head = new Tower<G>.head ();
+	private Tower<G> _head;
 	private CompareDataFunc<G>? _cmp;
-	private static const int _MAX_HEIGHT = 31;
+	private const int _MAX_HEIGHT = 31;
 	private static Private rand = new Private((ptr) => {
 		Rand *rnd = (Rand *)ptr;
 		delete rnd;
@@ -253,9 +269,17 @@ public class Gee.ConcurrentSet<G> : AbstractSortedSet<G> {
 			assert (_curr != null);
 		}
 
+		public Iterator.from_iterator (Iterator<G> iter) {
+			_curr = iter._curr;
+			_set = iter._set;
+			_prev = iter._prev;
+			_removed = iter._removed;
+		}
+
 		public new bool foreach (ForallFunc<G> f) {
 			assert (_curr != null);
 			HazardPointer.Context ctx = new HazardPointer.Context ();
+			Utils.Misc.unused (ctx);
 			if (_prev._iter[0] != null && !_removed) {
 				if (!f (_curr._data)) {
 					assert (_curr != null);
@@ -285,8 +309,22 @@ public class Gee.ConcurrentSet<G> : AbstractSortedSet<G> {
 			return true;
 		}
 
+		public Gee.Iterator<G>[] tee (uint forks) {
+			if (forks == 0) {
+				return new Gee.Iterator<G>[0];
+			} else {
+				Gee.Iterator<G>[] result = new Gee.Iterator<G>[forks];
+				result[0] = this;
+				for (uint i = 1; i < forks; i++) {
+					result[i] = new Iterator<G>.from_iterator (this);
+				}
+				return result;
+			}
+		}
+
 		public bool next () {
 			HazardPointer.Context ctx = new HazardPointer.Context ();
+			Utils.Misc.unused (ctx);
 			Tower<G>? new_prev = _prev._iter[0];
 			Tower<G>? new_curr = _curr;
 			bool success = Tower.proceed<G> (_set._cmp, ref new_prev, ref new_curr, 0);
@@ -308,6 +346,7 @@ public class Gee.ConcurrentSet<G> : AbstractSortedSet<G> {
 
 		public bool has_next () {
 			HazardPointer.Context ctx = new HazardPointer.Context ();
+			Utils.Misc.unused (ctx);
 			Tower<G> prev = _prev._iter[0];
 			Tower<G>? curr = _curr;
 			return Tower.proceed<G> (_set._cmp, ref prev, ref curr, 0);
@@ -320,6 +359,7 @@ public class Gee.ConcurrentSet<G> : AbstractSortedSet<G> {
 
 		public void remove () {
 			HazardPointer.Context ctx = new HazardPointer.Context ();
+			Utils.Misc.unused (ctx);
 			assert (valid);
 			if (Tower.remove<G> (_set._cmp, ref _prev, _curr)) {
 				AtomicInt.dec_and_test (ref _set._size);
@@ -331,16 +371,17 @@ public class Gee.ConcurrentSet<G> : AbstractSortedSet<G> {
 
 		public bool read_only { get { return true; } }
 
-		private bool _removed = false;
-		private ConcurrentSet<G> _set;
-		private TowerIter<G> _prev;
-		private Tower<G> _curr;
+		protected bool _removed = false;
+		protected ConcurrentSet<G> _set;
+		protected TowerIter<G> _prev;
+		protected Tower<G> _curr;
 	}
 
 	private class SubSet<G> : AbstractSortedSet<G> {
 		public override int size {
 			get {
 				HazardPointer.Context ctx = new HazardPointer.Context ();
+				Utils.Misc.unused (ctx);
 				Tower<G>? curr;
 				Range.improve_bookmark<G> (_range, out curr);
 				if (curr != null) {
@@ -359,6 +400,7 @@ public class Gee.ConcurrentSet<G> : AbstractSortedSet<G> {
 		public bool is_empty {
 			get {
 				HazardPointer.Context ctx = new HazardPointer.Context ();
+				Utils.Misc.unused (ctx);
 				Tower<G>? curr;
 				Range.improve_bookmark<G> (_range, out curr);
 				return curr != null;
@@ -373,11 +415,13 @@ public class Gee.ConcurrentSet<G> : AbstractSortedSet<G> {
 
 		public override Gee.Iterator<G> iterator () {
 			HazardPointer.Context ctx = new HazardPointer.Context ();
+			Utils.Misc.unused (ctx);
 			return new SubIterator<G> (_range);
 		}
 
 		public override bool contains (G item) {
 			HazardPointer.Context ctx = new HazardPointer.Context ();
+			Utils.Misc.unused (ctx);
 			if (!Range.inside<G> (_range, item)) {
 				return false;
 			}
@@ -388,6 +432,7 @@ public class Gee.ConcurrentSet<G> : AbstractSortedSet<G> {
 
 		public override bool add (G key) {
 			HazardPointer.Context ctx = new HazardPointer.Context ();
+			Utils.Misc.unused (ctx);
 			if (!Range.inside<G> (_range, key)) {
 				return false;
 			}
@@ -414,6 +459,7 @@ public class Gee.ConcurrentSet<G> : AbstractSortedSet<G> {
 
 		public override bool remove (G key) {
 			HazardPointer.Context ctx = new HazardPointer.Context ();
+			Utils.Misc.unused (ctx);
 			if (!Range.inside<G> (_range, key)) {
 				return false;
 			}
@@ -429,6 +475,7 @@ public class Gee.ConcurrentSet<G> : AbstractSortedSet<G> {
 
 		public override void clear () {
 			HazardPointer.Context ctx = new HazardPointer.Context ();
+			Utils.Misc.unused (ctx);
 			TowerIter<G> prev;
 			Tower<G>? first;
 			Range.improve_bookmark<G> (_range, out first, out prev);
@@ -440,6 +487,7 @@ public class Gee.ConcurrentSet<G> : AbstractSortedSet<G> {
 
 		public override G? first () {
 			HazardPointer.Context ctx = new HazardPointer.Context ();
+			Utils.Misc.unused (ctx);
 			Tower<G>? first;
 			Range.improve_bookmark<G> (_range, out first);
 			if (first == null) {
@@ -450,6 +498,7 @@ public class Gee.ConcurrentSet<G> : AbstractSortedSet<G> {
 
 		public override G? last () {
 			HazardPointer.Context ctx = new HazardPointer.Context ();
+			Utils.Misc.unused (ctx);
 			TowerIter<G> prev;
 			Range.improve_bookmark<G> (_range, null, out prev);
 			Tower<G>? curr = null;
@@ -477,6 +526,7 @@ public class Gee.ConcurrentSet<G> : AbstractSortedSet<G> {
 
 		public override Gee.Iterator<G>? iterator_at (G element) {
 			HazardPointer.Context ctx = new HazardPointer.Context ();
+			Utils.Misc.unused (ctx);
 			if (!Range.inside<G> (_range, element)) {
 				return null;
 			}
@@ -491,6 +541,7 @@ public class Gee.ConcurrentSet<G> : AbstractSortedSet<G> {
 
 		public override G? lower (G element) {
 			HazardPointer.Context ctx = new HazardPointer.Context ();
+			Utils.Misc.unused (ctx);
 			switch (Range.cmp<G> (_range, element)) {
 			case Range.Position.BEFORE:
 			case Range.Position.EMPTY:
@@ -512,6 +563,7 @@ public class Gee.ConcurrentSet<G> : AbstractSortedSet<G> {
 
 		public override G? higher (G element) {
 			HazardPointer.Context ctx = new HazardPointer.Context ();
+			Utils.Misc.unused (ctx);
 			switch (Range.cmp<G> (_range, element)) {
 			case Range.Position.BEFORE:
 				return first ();
@@ -538,6 +590,7 @@ public class Gee.ConcurrentSet<G> : AbstractSortedSet<G> {
 
 		public override G? floor (G element) {
 			HazardPointer.Context ctx = new HazardPointer.Context ();
+			Utils.Misc.unused (ctx);
 			switch (Range.cmp<G> (_range, element)) {
 			case Range.Position.BEFORE:
 			case Range.Position.EMPTY:
@@ -562,6 +615,7 @@ public class Gee.ConcurrentSet<G> : AbstractSortedSet<G> {
 
 		public override G? ceil (G element) {
 			HazardPointer.Context ctx = new HazardPointer.Context ();
+			Utils.Misc.unused (ctx);
 			switch (Range.cmp<G> (_range, element)) {
 			case Range.Position.BEFORE:
 				return first ();
@@ -584,16 +638,19 @@ public class Gee.ConcurrentSet<G> : AbstractSortedSet<G> {
 
 		public override SortedSet<G> head_set (G before) {
 			HazardPointer.Context ctx = new HazardPointer.Context ();
+			Utils.Misc.unused (ctx);
 			return new SubSet<G> (Range.cut_tail (_range, before));
 		}
 
 		public override SortedSet<G> tail_set (G after) {
 			HazardPointer.Context ctx = new HazardPointer.Context ();
+			Utils.Misc.unused (ctx);
 			return new SubSet<G> (Range.cut_head (_range, after));
 		}
 
 		public override SortedSet<G> sub_set (G from, G to) {
 			HazardPointer.Context ctx = new HazardPointer.Context ();
+			Utils.Misc.unused (ctx);
 			return new SubSet<G> (Range.cut (_range, from, to));
 		}
 
@@ -613,9 +670,18 @@ public class Gee.ConcurrentSet<G> : AbstractSortedSet<G> {
 			_curr = curr;
 		}
 
+		public SubIterator.from_iterator (SubIterator<G> iter) {
+			Range.improve_bookmark<G> (iter._range);
+			_range = iter._range;
+			_prev = iter._prev;
+			_curr = iter._curr;
+			_removed = iter._removed;
+		}
+
 		public new bool foreach (ForallFunc<G> f) {
 			assert (_curr != null);
 			HazardPointer.Context ctx = new HazardPointer.Context ();
+			Utils.Misc.unused (ctx);
 			if (!begin ()) {
 				return true;
 			}
@@ -648,8 +714,22 @@ public class Gee.ConcurrentSet<G> : AbstractSortedSet<G> {
 			return true;
 		}
 
+		public Gee.Iterator<G>[] tee (uint forks) {
+			if (forks == 0) {
+				return new Gee.Iterator<G>[0];
+			} else {
+				Gee.Iterator<G>[] result = new Gee.Iterator<G>[forks];
+				result[0] = this;
+				for (uint i = 1; i < forks; i++) {
+					result[i] = new SubIterator<G>.from_iterator (this);
+				}
+				return result;
+			}
+		}
+
 		public bool next () {
 			HazardPointer.Context ctx = new HazardPointer.Context ();
+			Utils.Misc.unused (ctx);
 			if (_prev._iter[0] == null) {
 				return begin ();
 			} else {
@@ -675,6 +755,7 @@ public class Gee.ConcurrentSet<G> : AbstractSortedSet<G> {
 
 		public bool has_next () {
 			HazardPointer.Context ctx = new HazardPointer.Context ();
+			Utils.Misc.unused (ctx);
 			if (_prev._iter[0] == null) {
 				Tower<G> next;
 				Range.improve_bookmark<G> (_range, out next);
@@ -696,6 +777,7 @@ public class Gee.ConcurrentSet<G> : AbstractSortedSet<G> {
 
 		public void remove () {
 			HazardPointer.Context ctx = new HazardPointer.Context ();
+			Utils.Misc.unused (ctx);
 			assert (valid);
 			if (Tower.remove<G> (_range._set._cmp, ref _prev, _curr)) {
 				AtomicInt.dec_and_test (ref _range._set._size);
@@ -726,10 +808,10 @@ public class Gee.ConcurrentSet<G> : AbstractSortedSet<G> {
 			return _curr != null;
 		}
 
-		private Range<G> _range;
-		private TowerIter<G> _prev;
-		private Tower<G>? _curr = null;
-		private bool _removed = false;
+		protected Range<G> _range;
+		protected TowerIter<G> _prev;
+		protected Tower<G>? _curr = null;
+		protected bool _removed = false;
 	}
 
 	private class Range<G> {
@@ -897,6 +979,7 @@ public class Gee.ConcurrentSet<G> : AbstractSortedSet<G> {
 
 		public static void improve_bookmark<G> (Range<G> range, out Tower<G>? out_curr = null, out TowerIter<G> prev = null) {
 			prev = TowerIter<G>();
+			out_curr = null;
 			switch (range._type) {
 			case RangeType.HEAD:
 				if (&out_curr != null) {
@@ -1098,6 +1181,7 @@ public class Gee.ConcurrentSet<G> : AbstractSortedSet<G> {
 
 		public static inline bool search_from_bookmark<G> (CompareDataFunc<G>? cmp, G key, ref TowerIter<G> prev, out TowerIter<G> next = null, uint8 to_level = 0, uint8 from_level = (uint8)_MAX_HEIGHT - 1) {
 			assert (from_level >= to_level);
+			next = TowerIter<G>();
 			bool res = false;
 			for (int i = from_level; i >= to_level; i--) {
 				unowned Tower<G> tmp_prev = prev._iter[i]; // Should be treated as NULL-like value
@@ -1336,7 +1420,7 @@ public class Gee.ConcurrentSet<G> : AbstractSortedSet<G> {
 			return ah ? -1 : cmp(a._data, b);
 		}
 
-		[NoArrayLength]
+		[CCode (array_length = false)]
 		public TowerNode<G>[] _nodes;
 		public G _data;
 		public int _height;
@@ -1348,7 +1432,7 @@ public class Gee.ConcurrentSet<G> : AbstractSortedSet<G> {
 	}
 
 	private struct TowerIter<G> {
-		[NoArrayLength]
+		[CCode (array_length = false)]
 		public Tower<G>? _iter[31 /*_MAX_HEIGHT*/];
 	}
 

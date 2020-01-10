@@ -4,6 +4,7 @@
  * Copyright (C) 2005  David Waite
  * Copyright (C) 2007-2008  Jürg Billeter
  * Copyright (C) 2009  Didier Villevalois
+ * Copyright (C) 2010-2014  Maciej Piechotka
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -24,7 +25,7 @@
  * 	Didier 'Ptitjes Villevalois <ptitjes@free.fr>
  */
 
-using GLib;
+using Gee.Utils.Assume;
 
 /**
  * Resizable array implementation of the {@link List} interface.
@@ -44,7 +45,7 @@ public class Gee.ArrayList<G> : AbstractBidirList<G> {
 	public override int size {
 		get { return _size; }
 	}
-	
+
 	/**
 	 * {@inheritDoc}
 	 */
@@ -56,10 +57,16 @@ public class Gee.ArrayList<G> : AbstractBidirList<G> {
 	 * The elements' equality testing function.
 	 */
 	[CCode (notify = false)]
-	public EqualDataFunc<G> equal_func { private set; get; }
+	public EqualDataFunc<G> equal_func {
+		private set {}
+		get {
+			return _equal_func.func;
+		}
+	}
 
 	internal G[] _items;
 	internal int _size;
+	private Functions.EqualDataFuncClosure<G> _equal_func;
 
 	// concurrent modification protection
 	private int _stamp = 0;
@@ -76,7 +83,7 @@ public class Gee.ArrayList<G> : AbstractBidirList<G> {
 		if (equal_func == null) {
 			equal_func = Functions.get_equal_func_for (typeof (G));
 		}
-		this.equal_func = equal_func;
+		_equal_func = new Functions.EqualDataFuncClosure<G>((owned)equal_func);
 		_items = new G[4];
 		_size = 0;
 	}
@@ -94,9 +101,15 @@ public class Gee.ArrayList<G> : AbstractBidirList<G> {
 		if (equal_func == null) {
 			equal_func = Functions.get_equal_func_for (typeof (G));
 		}
-		this.equal_func = equal_func;
-		_items = items;
+		_equal_func = new Functions.EqualDataFuncClosure<G>((owned)equal_func);
 		_size = items.length;
+		_items = do_wrap<G> ((owned)items);
+	}
+
+	internal ArrayList.with_closure (owned Functions.EqualDataFuncClosure<G> equal_func) {
+		_equal_func = equal_func;
+		_items = new G[4];
+		_size = 0;
 	}
 
 	/**
@@ -246,7 +259,7 @@ public class Gee.ArrayList<G> : AbstractBidirList<G> {
 		return_val_if_fail (start >= 0, null);
 		return_val_if_fail (stop <= _size, null);
 
-		var slice = new ArrayList<G> (this.equal_func);
+		var slice = new ArrayList<G>.with_closure (_equal_func);
 		for (int i = start; i < stop; i++) {
 			slice.add (this[i]);
 		}
@@ -269,9 +282,15 @@ public class Gee.ArrayList<G> : AbstractBidirList<G> {
 	}
 
 	private void shift (int start, int delta) {
+#if !DISABLE_INTERNAL_ASSERTS
 		assert (start >= 0);
 		assert (start <= _size);
 		assert (start >= -delta);
+#else
+		assume (start >= 0);
+		assume (start <= _size);
+		assume (start >= -delta);
+#endif
 
 		_items.move (start, start + delta, _size - start);
 
@@ -279,7 +298,11 @@ public class Gee.ArrayList<G> : AbstractBidirList<G> {
 	}
 
 	private void grow_if_needed (int new_count) {
+#if !DISABLE_INTERNAL_ASSERTS
 		assert (new_count >= 0);
+#else
+		assume (new_count >= 0);
+#endif
 
 		int minimum_size = _size + new_count;
 		if (minimum_size > _items.length) {
@@ -289,22 +312,24 @@ public class Gee.ArrayList<G> : AbstractBidirList<G> {
 	}
 
 	private void set_capacity (int value) {
+#if !DISABLE_INTERNAL_ASSERTS
 		assert (value >= _size);
+#endif
 
 		_items.resize (value);
 	}
 
 	private class Iterator<G> : Object, Traversable<G>, Gee.Iterator<G>, BidirIterator<G>, ListIterator<G>, BidirListIterator<G> {
-		private ArrayList<G> _list;
-		private int _index = -1;
-		private bool _removed = false;
-
-		// concurrent modification protection
-		private int _stamp = 0;
-
-		public Iterator (ArrayList list) {
+		public Iterator (ArrayList<G> list) {
 			_list = list;
 			_stamp = _list._stamp;
+		}
+
+		public Iterator.from_iterator (Iterator<G> iter) {
+			_list = iter._list;
+			_index = iter._index;
+			_removed = iter._removed;
+			_stamp = iter._stamp;
 		}
 
 		public bool next () {
@@ -334,17 +359,24 @@ public class Gee.ArrayList<G> : AbstractBidirList<G> {
 
 		public new G get () {
 			assert (_stamp == _list._stamp);
-			assert (_index >= 0);
-			assert (_index < _list._size);
 			assert (! _removed);
+			assert (_index >= 0);
+#if !DISABLE_INTERNAL_ASSERTS
+			assert (_index < _list._size);
+#else
+			assume (_index < _list._size);
+#endif
 			return _list._items[_index];
 		}
 
 		public void remove () {
 			assert (_stamp == _list._stamp);
-			assert (_index >= 0);
+			assert (! _removed && _index >= 0);
+#if !DISABLE_INTERNAL_ASSERTS
 			assert (_index < _list._size);
-			assert (! _removed);
+#else
+			assume (_index < _list._size);
+#endif
 			_list.remove_at (_index);
 			_index--;
 			_removed = true;
@@ -353,6 +385,10 @@ public class Gee.ArrayList<G> : AbstractBidirList<G> {
 
 		public bool previous () {
 			assert (_stamp == _list._stamp);
+			if (_removed && _index >= 0) {
+				_removed = false;
+				return true;
+			}
 			if (_index > 0) {
 				_index--;
 				return true;
@@ -362,7 +398,7 @@ public class Gee.ArrayList<G> : AbstractBidirList<G> {
 
 		public bool has_previous () {
 			assert (_stamp == _list._stamp);
-			return (_index - 1 >= 0);
+			return (_index > 0 || (_removed && _index >= 0));
 		}
 
 		public bool last () {
@@ -376,27 +412,39 @@ public class Gee.ArrayList<G> : AbstractBidirList<G> {
 
 		public new void set (G item) {
 			assert (_stamp == _list._stamp);
+			assert (! _removed);
 			assert (_index >= 0);
+#if !DISABLE_INTERNAL_ASSERTS
 			assert (_index < _list._size);
+#else
+			assume (_index < _list._size);
+#endif
 			_list._items[_index] = item;
 			_stamp = ++_list._stamp;
 		}
 
 		public void insert (G item) {
 			assert (_stamp == _list._stamp);
-			assert (_index >= 0);
 			assert (_index < _list._size);
-			_list.insert (_index, item);
+			if (_index == -1) {
+				_list.insert (0, item);
+				_removed = true;
+			}
+			if (_removed) {
+				_list.insert (_index + 1, item);
+			} else {
+				_list.insert (_index, item);
+			}
 			_index++;
 			_stamp = _list._stamp;
 		}
 
 		public void add (G item) {
 			assert (_stamp == _list._stamp);
-			assert (_index >= 0);
 			assert (_index < _list._size);
 			_list.insert (_index + 1, item);
 			_index++;
+			_removed = false;
 			_stamp = _list._stamp;
 		}
 
@@ -406,13 +454,13 @@ public class Gee.ArrayList<G> : AbstractBidirList<G> {
 			assert (_index < _list._size);
 			return _index;
 		}
-		
+
 		public bool read_only {
 			get {
 				return false;
 			}
 		}
-		
+
 		public bool valid {
 			get {
 				return _index >= 0 && _index < _list._size && ! _removed;
@@ -433,6 +481,141 @@ public class Gee.ArrayList<G> : AbstractBidirList<G> {
 			_index = _list._size - 1;
 			return true;
 		}
+
+		public Gee.Iterator<G>[] tee (uint forks) {
+			if (forks == 0) {
+				return new Gee.Iterator<G>[0];
+			} else {
+				Gee.Iterator<G>[] result = new Gee.Iterator<G>[forks];
+				result[0] = this;
+				for (uint i = 1; i < forks; i++) {
+					result[i] = new Iterator<G>.from_iterator (this);
+				}
+				return result;
+			}
+		}
+
+		protected ArrayList<G> _list;
+		protected int _index = -1;
+		protected bool _removed = false;
+		protected int _stamp = 0;
+	}
+
+	private static G[] do_wrap<G> (owned G[] data) {
+		var t = typeof (G);
+		if (t == typeof (bool)) {
+			return wrap_bool<G> ((bool[])data);
+		} else if (t == typeof (char)) {
+			return wrap_char<G> ((char[])data);
+		} else if (t == typeof (uchar)) {
+			return wrap_uchar<G> ((uchar[])data);
+		} else if (t == typeof (int)) {
+			return wrap_int<G> ((int[])data);
+		} else if (t == typeof (uint)) {
+			return wrap_uint<G> ((uint[])data);
+		} else if (t == typeof (int64)) {
+			return wrap_int64<G> ((int64[])data);
+		} else if (t == typeof (uint64)) {
+			return wrap_uint64<G> ((uint64[])data);
+		} else if (t == typeof (long)) {
+			return wrap_long<G> ((long[])data);
+		} else if (t == typeof (ulong)) {
+			return wrap_ulong<G> ((ulong[])data);
+		} else if (t == typeof (float)) {
+			return wrap_float<G> ((float?[])data);
+		} else if (t == typeof (double)) {
+			return wrap_double<G> ((double?[])data);
+		} else {
+			return (owned)data;
+		}
+	}
+
+	private static G[] wrap_bool<G> (bool[] data) {
+		G[] arr = new G[data.length];
+		for (uint i = 0; i < data.length; i++) {
+			arr[i] = data[i];
+		}
+		return arr;
+	}
+
+	private static G[] wrap_char<G> (char[] data) {
+		G[] arr = new G[data.length];
+		for (uint i = 0; i < data.length; i++) {
+			arr[i] = data[i];
+		}
+		return arr;
+	}
+
+	private static G[] wrap_uchar<G> (uchar[] data) {
+		G[] arr = new G[data.length];
+		for (uint i = 0; i < data.length; i++) {
+			arr[i] = data[i];
+		}
+		return arr;
+	}
+
+	private static G[] wrap_int<G> (int[] data) {
+		G[] arr = new G[data.length];
+		for (uint i = 0; i < data.length; i++) {
+			arr[i] = data[i];
+		}
+		return arr;
+	}
+
+	private static G[] wrap_uint<G> (uint[] data) {
+		G[] arr = new G[data.length];
+		for (uint i = 0; i < data.length; i++) {
+			arr[i] = data[i];
+		}
+		return arr;
+	}
+
+	private static G[] wrap_int64<G> (int64[] data) {
+		G[] arr = new G[data.length];
+		for (uint i = 0; i < data.length; i++) {
+			arr[i] = data[i];
+		}
+		return arr;
+	}
+
+	private static G[] wrap_uint64<G> (uint64[] data) {
+		G[] arr = new G[data.length];
+		for (uint i = 0; i < data.length; i++) {
+			arr[i] = data[i];
+		}
+		return arr;
+	}
+
+	private static G[] wrap_long<G> (long[] data) {
+		G[] arr = new G[data.length];
+		for (uint i = 0; i < data.length; i++) {
+			arr[i] = data[i];
+		}
+		return arr;
+	}
+
+	private static G[] wrap_ulong<G> (ulong[] data) {
+		G[] arr = new G[data.length];
+		for (uint i = 0; i < data.length; i++) {
+			arr[i] = data[i];
+		}
+		return arr;
+	}
+
+	private static G[] wrap_float<G> (float?[] data) {
+		G[] arr = new G[data.length];
+		for (uint i = 0; i < data.length; i++) {
+			arr[i] = data[i];
+		}
+		return arr;
+	}
+
+	private static G[] wrap_double<G> (double?[] data) {
+		G[] arr = new G[data.length];
+		for (uint i = 0; i < data.length; i++) {
+			arr[i] = data[i];
+		}
+		return arr;
 	}
 }
 

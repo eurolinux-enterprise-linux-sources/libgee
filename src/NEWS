@@ -1,6 +1,110 @@
-libgee 0.10.1
+libgee 0.18.1
 =============
- * Fix HashSet.foreach
+ * Various build and runtime fixes
+
+libgee 0.18.0
+=============
+ * No changes since previous release
+
+libgee 0.17.92
+==============
+ * Fix default value of --enable-consistency-check
+
+libgee 0.16.1
+=============
+ * Workaround GC thread consuming 100% of CPU
+ * Fix HashMap destructor name
+ * Fix a documentation typo
+
+libgee 0.16.0
+=============
+ * No changes since previous release
+
+libgee 0.15.92
+==============
+ * Improve documentation
+
+libgee 0.15.90
+==============
+ * Add explicit tee implementations
+ * Improve the benchmark
+
+libgee 0.15.3
+=============
+ * Add UnrolledLinkedList class implementing List and Deque interface
+ * Clarify the add and insert operation on list iterators and make the behaviour consistent for ArrayList and LinkedList
+ * Allow (partially) disable internal asserts
+ * Internal symbols are hidden
+
+libgee 0.14.0
+=============
+ * No changes since previous release
+
+libgee 0.13.91
+==============
+ * Fix HazardPointer bugs
+ * Fix List test
+
+libgee 0.13.90
+==============
+ * Fix the broken test
+
+libgee 0.13.5.1
+===============
+ * Remove workaround for 'old' (<0.23.2) vala
+
+libgee 0.13.5
+=============
+ * Use WeakRef for keeping of read-only proxy for collection
+
+libgee 0.13.4
+=============
+ * The collection cloning no longer leaks memory
+ * Various warning fixes
+ * Various fixes to build system
+
+libgee 0.12.0
+=============
+ * No changes since previous release
+
+libgee 0.11.92
+==============
+ * Override read_only_view property in ReadOnlySortedMap and its subclasses
+
+libgee 0.11.91
+==============
+ * Bump the GLib requirements to 2.36 in configure.ac
+
+libgee 0.11.90
+==============
+ * Add adding to collection based on iterators
+ * Make Collection.add_all_array, contains_all_array and remove_all_array virtual
+ * Avoid destroy coroutine creation in hazard pointer implementation
+ * Various bugfixes
+
+libgee 0.11.5
+=============
+ * Add Traversable.tee
+ * Add exception handling to Future
+ * Add ability of getting Future from Lazy
+ * Make Traversable.flat_map a virtual function
+ * Add more specializations to .foreach
+ * Improve the test
+ * Various bugfixes
+
+libgee 0.11.4
+=============
+ * Add flat_map method to Traversable
+ * Add zip method to Future
+ * Specialize stream iterator (4-22% speed improvement in tests)
+ * Extend the Traversable.Stream with Stream.WAIT
+ * Fix lazy value usage in unfold
+
+libgee 0.11.0
+=============
+ * Add futures and promises to libgee
+ * Update the build system
+ * Return true from HashSet.Iterator.foreach() if we fall off the end
 
 libgee 0.10.0
 =============

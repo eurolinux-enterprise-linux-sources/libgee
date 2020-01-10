@@ -1,7 +1,7 @@
 /* priorityqueue.vala
  *
  * Copyright (C) 2009  Didier Villevalois
- * Copyright (C) 2012  Maciej Piechotka
+ * Copyright (C) 2012-2014  Maciej Piechotka
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -46,7 +46,12 @@ public class Gee.PriorityQueue<G> : Gee.AbstractQueue<G> {
 	 * The elements' comparator function.
 	 */
 	[CCode (notify = false)]
-	public CompareDataFunc<G> compare_func { private set; get; }
+	public CompareDataFunc<G> compare_func {
+		private set {}
+		get {
+			return _compare_func;
+		}
+	}
 
 	private int _size = 0;
 	private int _stamp = 0;
@@ -55,11 +60,7 @@ public class Gee.PriorityQueue<G> : Gee.AbstractQueue<G> {
 	private Type2Node<G>? _lm_head = null;
 	private Type2Node<G>? _lm_tail = null;
 	private Type1Node<G>? _p = null;
-#if VALA_0_16
-	private Type1Node<G>?[] _a = new Type1Node<G>?[0];
-#else
-	private Type1Node<G>?[] _a = new Type1Node<G>[0];
-#endif
+	private Type1Node<G>?[] _a;
 	private NodePair<G>? _lp_head = null;
 	private unowned NodePair<G>? _lp_tail = null;
 	private bool[] _b = new bool[0];
@@ -67,6 +68,7 @@ public class Gee.PriorityQueue<G> : Gee.AbstractQueue<G> {
 	private Type1Node<G>? _ll_tail = null;
 	private unowned Node<G> _iter_head = null;
 	private unowned Node<G> _iter_tail = null;
+	private CompareDataFunc<G> _compare_func;
 
 	/**
 	 * Constructs a new, empty priority queue.
@@ -80,7 +82,8 @@ public class Gee.PriorityQueue<G> : Gee.AbstractQueue<G> {
 		if (compare_func == null) {
 			compare_func = Functions.get_compare_func_for (typeof (G));
 		}
-		this.compare_func = compare_func;
+		_compare_func = (owned)compare_func;
+		_a = new Type1Node<G>?[0];
 	}
 
 	/**
@@ -103,7 +106,7 @@ public class Gee.PriorityQueue<G> : Gee.AbstractQueue<G> {
 	public override bool is_full {
 		get { return false; }
 	}
-	
+
 	/**
 	 * {@inheritDoc}
 	 */
@@ -366,6 +369,18 @@ public class Gee.PriorityQueue<G> : Gee.AbstractQueue<G> {
 	 */
 	public override Gee.Iterator<G> iterator () {
 		return new Iterator<G> (this);
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	public override bool foreach (ForallFunc<G> f) {
+		for (unowned Node<G>? current = _iter_head; current != null; current = current.iter_next) {
+			if (!f (current.data)) {
+				return false;
+			}
+		}
+		return true;
 	}
 
 	private inline int _compare (Node<G> node1, Node<G> node2) {
@@ -1123,16 +1138,18 @@ public class Gee.PriorityQueue<G> : Gee.AbstractQueue<G> {
 	}
 
 	private class Iterator<G> : Object, Traversable<G>, Gee.Iterator<G> {
-		private PriorityQueue<G> queue;
-		private unowned Node<G>? position;
-		private unowned Node<G>? previous;
-		private int stamp;
-
 		public Iterator (PriorityQueue<G> queue) {
 			this.queue = queue;
 			this.position = null;
 			this.previous = null;
 			this.stamp = queue._stamp;
+		}
+
+		public Iterator.from_iterator (Iterator<G> iter) {
+			queue = iter.queue;
+			position = iter.position;
+			previous = iter.previous;
+			stamp = iter.stamp;
 		}
 
 		public bool next () {
@@ -1188,14 +1205,17 @@ public class Gee.PriorityQueue<G> : Gee.AbstractQueue<G> {
 			stamp++;
 			assert (stamp == queue._stamp);
 		}
-		
+
 		public bool read_only { get { return false; } }
-		
+
 		public bool valid { get { return position != null; } }
 
 		public bool foreach (ForallFunc<G> f) {
 			if (position == null) {
 				position = (previous != null) ? previous.iter_next : queue._iter_head;
+			}
+			if (position == null) {
+				return true;
 			}
 			if (!f (position.data)) {
 				return false;
@@ -1209,5 +1229,24 @@ public class Gee.PriorityQueue<G> : Gee.AbstractQueue<G> {
 			}
 			return true;
 		}
+
+
+		public Gee.Iterator<G>[] tee (uint forks) {
+			if (forks == 0) {
+				return new Gee.Iterator<G>[0];
+			} else {
+				Gee.Iterator<G>[] result = new Gee.Iterator<G>[forks];
+				result[0] = this;
+				for (uint i = 1; i < forks; i++) {
+					result[i] = new Iterator<G>.from_iterator (this);
+				}
+				return result;
+			}
+		}
+
+		protected PriorityQueue<G> queue;
+		protected unowned Node<G>? position;
+		protected unowned Node<G>? previous;
+		protected int stamp;
 	}
 }

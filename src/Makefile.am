@@ -1,6 +1,6 @@
 include $(top_srcdir)/Makefile.decl
-ACLOCAL_AMFLAGS = -I m4
-AM_DISTCHECK_CONFIGURE_FLAGS = --enable-introspection=no
+ACLOCAL_AMFLAGS = --install -I m4
+AM_DISTCHECK_CONFIGURE_FLAGS = --enable-introspection=no --enable-vala
 
 if ENABLE_DOC
 DOC_SUBDIR = \
@@ -54,5 +54,6 @@ EXTRA_DIST += \
 	gitlog-to-changelog \
 	MAINTAINERS \
 	gee-0.8.pc.in \
+	utils/geeutils.vapi \
 	$(NULL)
 

@@ -30,7 +30,7 @@ public class TestData {
 	}
 
 	private static uint DATA_SIZE = data_size ();
-	private static const uint RND_IDX_SIZE = 8;
+	private const uint RND_IDX_SIZE = 8;
 
 	private static string[] data = create_data (DATA_SIZE);
 	private static string[] sorted_data = sort_array (data);
@@ -104,7 +104,7 @@ public class TestData {
 	}
 
 	private static string[] sort_array (owned string[] array) {
-		qsort_with_data<string> (array, sizeof(string), (a, b) => {return strcmp(*(string **)a, *(string **)b);});
+		qsort_with_data<string> (array, sizeof(string), (a, b) => {return strcmp(a, b);});
 		return (owned)array;
 	}
 }

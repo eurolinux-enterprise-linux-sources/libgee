@@ -2,7 +2,7 @@
  *
  * Copyright (C) 2008  Jürg Billeter
  * Copyright (C) 2009  Didier Villevalois, Julien Peeters
- * Copyright (C) 2011-2012  Maciej Piechotka
+ * Copyright (C) 2011-2013  Maciej Piechotka
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -45,8 +45,8 @@ public abstract class CollectionTests : Gee.TestCase {
 		add_test ("[Collection] retain_all", test_retain_all);
 		add_test ("[Collection] to_array", test_to_array);
 		add_test ("[Collection] GObject properties", test_gobject_properties);
-		add_test ("[Collection] fold", test_fold);
 		add_test ("[Collection] foreach", test_foreach);
+		add_test ("[Collection] fold", test_fold);
 		add_test ("[Collection] map", test_map);
 		add_test ("[Collection] scan", test_scan);
 		add_test ("[Collection] filter", test_filter);
@@ -310,15 +310,14 @@ public abstract class CollectionTests : Gee.TestCase {
 			assert (test_collection.contains (a));
 		}
 		assert (test_collection.size == to_add.length);
-		
+
 		test_collection.clear ();
-		
+
 		assert (test_collection.size == 0);
-		
+
 		Iterator<string> iter = test_collection.iterator ();
 		assert (iter != null);
-		assert (!iter.has_next ());		
-		
+		assert (!iter.has_next ());
 	}
 
 	public void test_add_all () {
@@ -641,124 +640,398 @@ public abstract class CollectionTests : Gee.TestCase {
 		assert (value.get_int () == test_collection.size);
 		value.unset ();
 	}
-	
-	public void test_fold () {
-		assert (test_collection.add ("one"));
-		assert (test_collection.add ("two"));
-		assert (test_collection.add ("three"));
-		
-		int count;
-		
-		count = test_collection.fold<int> ((x, y) => {return y + 1;}, 0);
-		assert (count == 3);
-		
-		count = test_collection.iterator ().fold<int> ((x, y) => {return y + 1;}, 0);
-		assert (count == 3);
-		
-		Iterator<string> iter = test_collection.iterator ();
-		assert (iter.next ());
-		count = iter.fold<int> ((x, y) => {return y + 1;}, 0);
-		assert (count == 3);
-	}
-	
+
 	public void test_foreach () {
-		assert (test_collection.add ("one"));
-		assert (test_collection.add ("two"));
-		assert (test_collection.add ("three"));
-		
-		int count = 0;
 		bool res;
-		
-		res = test_collection.foreach ((x) => {count++; return true;});
-		assert (count == 3);
+		unowned string[] data = TestData.get_data ();
+
+		// Check for empty collection
+		res = test_collection.foreach ((x) => {
+			assert_not_reached ();
+		});
 		assert (res == true);
-		
-		res = test_collection.iterator ().foreach ((x) => {count++; return true;});
-		assert (count == 6);
-		assert (res == true);
-		
-		Iterator<string> iter = test_collection.iterator ();
-		assert (iter.next ());
-		res = iter.foreach ((x) => {count++; return true;});
-		assert (count == 9);
+		res = test_collection.iterator ().foreach ((x) => {
+			assert_not_reached ();
+		});
 		assert (res == true);
 
-		res = test_collection.foreach ((x) => {count++; return false;});
-		assert (count == 10);
-		assert (res == false);
+		// Check for full run
+		foreach (unowned string el in data) {
+			assert (test_collection.add (el));
+		}
+
+		int count;
+
+		count = 0;
+		var test_iterator = test_collection.iterator ();
+		res = test_collection.foreach ((x) => {
+			assert (test_iterator.next ());
+			assert (x == test_iterator.get ());
+			count++;
+			return true;
+		});
+		assert (count == data.length);
+		assert (res == true);
+
+		count = 0;
+		test_iterator = test_collection.iterator ();
+		var iter = test_collection.iterator ();
+		res = iter.foreach ((x) => {
+			assert (test_iterator.next ());
+			assert (x == test_iterator.get ());
+			count++;
+			return true;
+		});
+		assert (count == data.length);
+		assert (res == true);
+		assert (iter.valid);
+		assert (iter.get () == test_iterator.get ());
+		assert (!iter.has_next ());
+
+		count = 1;
+		test_iterator = test_collection.iterator ();
+		iter = test_collection.iterator ();
+		assert (iter.next ());
+		assert (iter.next ());
+		assert (test_iterator.next ());
+		res = iter.foreach ((x) => {
+			assert (test_iterator.next ());
+			assert (x == test_iterator.get ());
+			count++;
+			return true;
+		});
+		assert (count == data.length);
+		assert (res == true);
+		assert (iter.valid);
+		assert (iter.get () == test_iterator.get ());
+		assert (!iter.has_next ());
+
+		count = 1;
+		test_iterator = test_collection.iterator ();
+		iter = test_collection.iterator ();
+		assert (iter.next ());
+		assert (iter.next ());
+		assert (iter.has_next ());
+		assert (test_iterator.next ());
+		res = iter.foreach ((x) => {
+			assert (test_iterator.next ());
+			assert (x == test_iterator.get ());
+			count++;
+			return true;
+		});
+		assert (count == data.length);
+		assert (res == true);
+		assert (iter.valid);
+		assert (iter.get () == test_iterator.get ());
+		assert (!iter.has_next ());
+
+		// Check for break after 1-3 elements
+		for (int i = 0; i < 3; i++) {
+			count = 0;
+			test_iterator = test_collection.iterator ();
+			res = test_collection.foreach ((x) => {
+				assert (test_iterator.next ());
+				assert (x == test_iterator.get ());
+				return count++ != i;
+			});
+			assert (count == i + 1);
+			assert (res == false);
+
+			count = 0;
+			test_iterator = test_collection.iterator ();
+			iter = test_collection.iterator ();
+			res = iter.foreach ((x) => {
+				assert (test_iterator.next ());
+				assert (x == test_iterator.get ());
+				return count++ != i;
+			});
+			assert (count == i + 1);
+			assert (res == false);
+			assert (iter.valid);
+			assert (iter.get () == test_iterator.get ());
+			assert (iter.has_next ());
+			while (test_iterator.next ()) {
+				assert (iter.next ());
+				assert (iter.get () == test_iterator.get ());
+			}
+			assert (!iter.has_next ());
+
+			count = 1;
+			test_iterator = test_collection.iterator ();
+			iter = test_collection.iterator ();
+			assert (iter.next ());
+			assert (iter.next ());
+			assert (test_iterator.next ());
+			res = iter.foreach ((x) => {
+				assert (test_iterator.next ());
+				assert (x == test_iterator.get ());
+				return count++ != i + 1;
+			});
+			assert (count == i + 2);
+			assert (res == false);
+			assert (iter.valid);
+			assert (iter.get () == test_iterator.get ());
+			assert (iter.has_next ());
+			while (test_iterator.next ()) {
+				assert (iter.next ());
+				assert (iter.get () == test_iterator.get ());
+			}
+			assert (!iter.has_next ());
+
+			count = 1;
+			test_iterator = test_collection.iterator ();
+			iter = test_collection.iterator ();
+			assert (iter.next ());
+			assert (iter.next ());
+			assert (iter.has_next ());
+			assert (test_iterator.next ());
+			res = iter.foreach ((x) => {
+				assert (test_iterator.next ());
+				assert (x == test_iterator.get ());
+				return count++ != i + 1;
+			});
+			assert (count == i + 2);
+			assert (res == false);
+			assert (iter.valid);
+			assert (iter.get () == test_iterator.get ());
+			assert (iter.has_next ());
+			while (test_iterator.next ()) {
+				assert (iter.next ());
+				assert (iter.get () == test_iterator.get ());
+			}
+			assert (!iter.has_next ());
+		}
+	}
+
+	public void test_fold () {
+		int count;
+		unowned string[] data = TestData.get_data ();
+
+		// Check for empty collection
+		count = test_collection.fold<int> ((x, y) => {
+			assert_not_reached ();
+		}, 0);
+		count = test_collection.iterator ().fold<int> ((x, y) => {
+			assert_not_reached ();
+		}, 0);
+
+		// Check for some elements in the collection
+		foreach (unowned string el in data) {
+			assert (test_collection.add (el));
+		}
+
+		var test_iterator = test_collection.iterator ();
+		count = test_collection.fold<int> ((x, y) => {
+			assert (test_iterator.next ());
+			assert (x == test_iterator.get ());
+			return y + 1;
+		}, 0);
+		assert (count == data.length);
+
+		test_iterator = test_collection.iterator ();
+		count = test_collection.iterator ().fold<int> ((x, y) => {
+			assert (test_iterator.next ());
+			assert (x == test_iterator.get ());
+			return y + 1;
+		}, 0);
+		assert (count == data.length);
+
+		test_iterator = test_collection.iterator ();
+		var iter = test_collection.iterator ();
+		assert (iter.next ());
+		assert (iter.next ());
+		assert (test_iterator.next ());
+		count = iter.fold<int> ((x, y) => {
+			assert (test_iterator.next ());
+			assert (x == test_iterator.get ());
+			return y + 1;
+		}, 1);
+		assert (count == data.length);
+
+		test_iterator = test_collection.iterator ();
+		iter = test_collection.iterator ();
+		assert (iter.next ());
+		assert (iter.next ());
+		assert (iter.has_next ());
+		assert (test_iterator.next ());
+		count = iter.fold<int> ((x, y) => {
+			assert (test_iterator.next ());
+			assert (x == test_iterator.get ());
+			return y + 1;
+		}, 1);
+		assert (count == data.length);
 	}
 
 	public void test_map () {
-		assert (test_collection.add ("one"));
-		assert (test_collection.add ("two"));
-		assert (test_collection.add ("three"));
+		unowned string[] data = TestData.get_data ();
 
-		bool one = false;
-		bool two = false;
-		bool three = false;
-
-		int i = 0;
-		var iter = test_collection.iterator().map<int> ((str) => {
-			if (str == "one") {
-				assert (!one);
-				one = true;
-			} else if (str == "two") {
-				assert (!two);
-				two = true;
-			} else if (str == "three") {
-				assert (!three);
-				three = true;
-			} else {
-				assert_not_reached ();
-			}
-			return i++;
+		// Check for empty collections
+		var iter = test_collection.map<int> ((str) => {
+			assert_not_reached ();
 		});
-		int j = 0;
-		while (iter.next ()) {
-			assert (i == j);
-			assert (j == iter.get ());
-			assert (j == iter.get ());
-			j++;
-			assert (i == j);
+		assert (!iter.valid);
+		assert (!iter.has_next ());
+		assert (!iter.next ());
+
+		iter = test_collection.iterator().map<int> ((str) => {
+			assert_not_reached ();
+		});
+		assert (!iter.valid);
+		assert (!iter.has_next ());
+		assert (!iter.next ());
+
+		// Check for some elements in collection
+		foreach (unowned string el in data) {
+			assert (test_collection.add (el));
 		}
 
-		assert (i == j);
-		assert (i == test_collection.size);
-		assert (one);
-		assert (two);
-		assert (three);
-		
-		one = two = three = false;
-		i = j = 0;
-
+		int i = 0, j = 0;
+		var test_iterator = test_collection.iterator ();
 		iter = test_collection.map<int> ((str) => {
-			if (str == "one") {
-				assert (!one);
-				one = true;
-			} else if (str == "two") {
-				assert (!two);
-				two = true;
-			} else if (str == "three") {
-				assert (!three);
-				three = true;
-			} else {
-				assert_not_reached ();
-			}
+			assert (test_iterator.next ());
+			assert (str == test_iterator.get ());
 			return i++;
 		});
-		while (iter.next ()) {
-			assert (i == j);
+		assert (!iter.valid);
+		test_collection.foreach ((str) => {
+			assert (j == i);
+			assert (iter.has_next ());
+			assert (j == i);
+			assert (iter.next ());
+			assert (iter.valid);
 			assert (j == iter.get ());
-			assert (j == iter.get ());
-			j++;
-			assert (i == j);
-		}
+			assert (++j == i);
+			return true;
+		});
+		assert (!iter.has_next ());
+		assert (!iter.next ());
 
-		assert (i == j);
-		assert (i == test_collection.size);
-		assert (one);
-		assert (two);
-		assert (three);
+		i = 0;
+		j = 0;
+		test_iterator = test_collection.iterator ();
+		iter = test_collection.map<int> ((str) => {
+			assert (test_iterator.next ());
+			assert (str == test_iterator.get ());
+			return i++;
+		});
+		assert (!iter.valid);
+		test_collection.foreach ((str) => {
+			assert (j == i);
+			assert (iter.has_next ());
+			assert (j == i);
+			if (iter.valid) {
+				j++;
+			}
+			assert (iter.next ());
+			assert (iter.valid);
+			assert (j == i);
+			return true;
+		});
+		assert (!iter.has_next ());
+		assert (!iter.next ());
+
+		i = 0;
+		j = 0;
+		test_iterator = test_collection.iterator ();
+		var outer_iter = test_collection.iterator ();
+		iter = outer_iter.map<int> ((str) => {
+			assert (test_iterator.next ());
+			assert (str == test_iterator.get ());
+			return i++;
+		});
+		assert (!iter.valid);
+		test_collection.foreach ((str) => {
+			assert (j == i);
+			assert (iter.has_next ());
+			assert (j == i);
+			assert (iter.next ());
+			assert (iter.valid);
+			assert (j == iter.get ());
+			assert (++j == i);
+			return true;
+		});
+		assert (!iter.has_next ());
+		assert (!iter.next ());
+
+		i = 0;
+		j = 0;
+		test_iterator = test_collection.iterator ();
+		outer_iter = test_collection.iterator ();
+		iter = outer_iter.map<int> ((str) => {
+			assert (test_iterator.next ());
+			assert (str == test_iterator.get ());
+			return i++;
+		});
+		assert (!iter.valid);
+		test_collection.foreach ((str) => {
+			assert (j == i);
+			assert (iter.has_next ());
+			assert (j == i);
+			if (iter.valid) {
+				j++;
+			}
+			assert (iter.next ());
+			assert (iter.valid);
+			assert (j == i);
+			return true;
+		});
+		assert (!iter.has_next ());
+		assert (!iter.next ());
+
+		i = 1;
+		j = 1;
+		test_iterator = test_collection.iterator ();
+		outer_iter = test_collection.iterator ();
+		var outer_iter2 = test_collection.iterator ();
+		assert (outer_iter.next ());
+		assert (outer_iter2.next ());
+		assert (outer_iter.next ());
+		assert (outer_iter2.next ());
+		assert (test_iterator.next ());
+		iter = outer_iter.map<int> ((str) => {
+			assert (test_iterator.next ());
+			assert (str == test_iterator.get ());
+			return i++;
+		});
+		assert (iter.valid);
+		do {
+			assert (i == j);
+			assert (outer_iter2.has_next () == iter.has_next ());
+			assert (i == j);
+			assert (j == iter.get ());
+			assert (++j == i);
+			assert (outer_iter2.has_next () == iter.next ());
+			assert (iter.valid);
+		} while (outer_iter2.next ());
+		assert (!iter.has_next ());
+		assert (!iter.next ());
+
+		i = 1;
+		j = 1;
+		test_iterator = test_collection.iterator ();
+		outer_iter = test_collection.iterator ();
+		outer_iter2 = test_collection.iterator ();
+		assert (outer_iter.next ());
+		assert (outer_iter2.next ());
+		assert (outer_iter.next ());
+		assert (outer_iter2.next ());
+		assert (test_iterator.next ());
+		iter = outer_iter.map<int> ((str) => {
+			assert (test_iterator.next ());
+			assert (str == test_iterator.get ());
+			return i++;
+		});
+		assert (iter.valid);
+		do {
+			assert (i == j);
+			assert (outer_iter2.has_next () == iter.has_next ());
+			assert (i == j);
+			assert (outer_iter2.has_next () == iter.next ());
+			j++;
+			assert (iter.valid);
+		} while (outer_iter2.next ());
+		assert (!iter.has_next ());
+		assert (!iter.next ());
 	}
 
 	public void test_scan () {
