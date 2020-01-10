@@ -1,6 +1,6 @@
 Name:           libgee
 Version:        0.10.1
-Release:        1%{?dist}
+Release:        3%{?dist}
 Summary:        GObject collection library
 
 Group:          System Environment/Libraries
@@ -116,6 +116,12 @@ find $RPM_BUILD_ROOT -name '*.la' -exec rm -f {} ';'
 
 
 %changelog
+* Fri Jan 24 2014 Daniel Mach <dmach@redhat.com> - 0.10.1-3
+- Mass rebuild 2014-01-24
+
+* Fri Dec 27 2013 Daniel Mach <dmach@redhat.com> - 0.10.1-2
+- Mass rebuild 2013-12-27
+
 * Mon Apr 15 2013 Michel Salim <salimma@fedoraproject.org> - 0.10.1-1
 - Update to 0.10.1
 
